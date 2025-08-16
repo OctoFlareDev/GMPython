@@ -3,7 +3,11 @@ namespace py = pybind11;
 
 #include <string>
 
+#ifdef _WIN32
 #define GMEXPORT extern "C" __declspec (dllexport)
+#else
+#define GMEXPORT extern "C"
+#endif
 
 struct buffer {
     char* pos;
