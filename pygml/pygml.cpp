@@ -35,12 +35,14 @@ public:
     }
 };
 
-GMEXPORT void _python_initialize() {
+GMEXPORT const char* _python_initialize() {
     py::initialize_interpreter();
+    return "";
 }
 
-GMEXPORT void _python_finalize() {
+GMEXPORT const char* _python_finalize() {
     py::finalize_interpreter();
+    return "";
 }
 
 GMEXPORT double _python_call_function(char* cbuf) {
