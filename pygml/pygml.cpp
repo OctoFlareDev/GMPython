@@ -9,6 +9,49 @@ namespace py = pybind11;
 #define GMEXPORT extern "C"
 #endif
 
+#if defined(__linux__)
+  #include <dlfcn.h>
+  #include <stdio.h>
+  #include <string.h>
+  #include <string>
+
+// Return directory of this .so using dladdr
+static std::string this_so_dir() {
+    Dl_info info{};
+    if (dladdr((void*)&this_so_dir, &info) && info.dli_fname) {
+        std::string path = info.dli_fname;
+        auto slash = path.find_last_of('/');
+        if (slash != std::string::npos) return path.substr(0, slash);
+    }
+    return ".";
+}
+
+static void ensure_libpython_global() {
+    const char* soname = "libpython3.8.so.1.0";
+
+    // 1) If already loaded, "promote" it to GLOBAL (works on glibc)
+    void* h = dlopen(soname, RTLD_NOW | RTLD_GLOBAL | RTLD_NOLOAD);
+    if (h) return;
+
+    // 2) Try loading from same folder as this extension .so (common GM layout)
+    std::string local = this_so_dir() + "/" + soname;
+    h = dlopen(local.c_str(), RTLD_NOW | RTLD_GLOBAL);
+    if (h) return;
+
+    // 3) Fallback: try normal loader search paths
+    h = dlopen(soname, RTLD_NOW | RTLD_GLOBAL);
+    if (h) return;
+
+    fprintf(stderr, "[pygml] Failed to dlopen %s RTLD_GLOBAL: %s\n", soname, dlerror());
+}
+
+// Run as soon as the extension .so is loaded (before your exported funcs run)
+__attribute__((constructor))
+static void pygml_ctor() {
+    ensure_libpython_global();
+}
+#endif
+
 struct buffer {
     char* pos;
 public:
